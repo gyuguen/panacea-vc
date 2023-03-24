@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/tendermint/tendermint/libs/os"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -76,7 +78,7 @@ func TestCreateVCAndVP(t *testing.T) {
 	issuerDID := newDID(validatorPrivKeyBz)
 	holderDID := newDID(providerPrivKeyBz)
 
-	credential := createCredential(issuerDID, holderDID)
+	credential := createCredential(issuerDID, holderDID, 1000<<(10*1))
 
 	credentialBz, err := credential.MarshalJSON()
 	require.NoError(t, err)
@@ -85,6 +87,7 @@ func TestCreateVCAndVP(t *testing.T) {
 		VerificationMethod: didtypes.NewVerificationMethodID(newDID(validatorPrivKeyBz), "key1"),
 		SignatureType:      vc.EcdsaSecp256k1Signature2019,
 	})
+	fmt.Println(len(verifiableCredential))
 	require.NoError(t, err)
 
 	err = frame.VerifyCredential(verifiableCredential)
@@ -151,6 +154,12 @@ func TestCreateVCAndVP(t *testing.T) {
 							Enum: []presexch.StrOrInt{"Korea"},
 						},
 					},
+					{
+						Path: []string{"$.credentialSubject.description"},
+						Filter: &presexch.Filter{
+							Type: &strFilterType,
+						},
+					},
 				},
 			},
 		}},
@@ -173,7 +182,8 @@ func TestCreateVCAndVP(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	fmt.Println(string(verifiablePresentationWithPd))
+	err = os.WriteFile("data_vp_1mb.json", verifiablePresentationWithPd, 0755)
+	require.NoError(t, err)
 }
 
 func createMsgCreateDIDTxBytes(t *testing.T, privKeyBz []byte) ([]byte, error) {
@@ -263,7 +273,12 @@ func newDID(privKey []byte) string {
 	return didtypes.NewDID(secp256k1.PrivKey(privKey).PubKey().Bytes())
 }
 
-func createCredential(issuerDID, holderDID string) verifiable.Credential {
+func createCredential(issuerDID, holderDID string, length int) verifiable.Credential {
+	if length < 790 {
+		length = 1
+	} else {
+		length = length - 790
+	}
 	return verifiable.Credential{
 		ID:      uuid.NewString(),
 		Context: []string{verifiable.ContextURI, "https://w3id.org/security/bbs/v1"},
@@ -281,6 +296,20 @@ func createCredential(issuerDID, holderDID string) verifiable.Credential {
 			"age":         21,
 			"nationality": "Korea",
 			"hobby":       "movie",
+			"description": generateRandomString(length),
 		},
 	}
+}
+
+func generateRandomString(length int) string {
+	charset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[r.Intn(len(charset))]
+	}
+
+	return string(b)
 }
