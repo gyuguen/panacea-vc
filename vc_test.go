@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tendermint/tendermint/libs/os"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/tendermint/tendermint/libs/os"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
@@ -78,16 +79,16 @@ func TestCreateVCAndVP(t *testing.T) {
 	issuerDID := newDID(validatorPrivKeyBz)
 	holderDID := newDID(providerPrivKeyBz)
 
-	credential := createCredential(issuerDID, holderDID, 1000<<(10*1))
+	credential := createCredential(issuerDID, holderDID, 1<<(10*1))
 
 	credentialBz, err := credential.MarshalJSON()
 	require.NoError(t, err)
+	fmt.Println(string(credentialBz))
 
 	verifiableCredential, err := frame.SignCredential(credentialBz, validatorPrivKeyBz, &vc.ProofOptions{
 		VerificationMethod: didtypes.NewVerificationMethodID(newDID(validatorPrivKeyBz), "key1"),
 		SignatureType:      vc.EcdsaSecp256k1Signature2019,
 	})
-	fmt.Println(len(verifiableCredential))
 	require.NoError(t, err)
 
 	err = frame.VerifyCredential(verifiableCredential)
@@ -166,6 +167,7 @@ func TestCreateVCAndVP(t *testing.T) {
 	}
 	pdBz, err := json.Marshal(pd)
 	require.NoError(t, err)
+	fmt.Println(string(pdBz))
 
 	presentationWithPd, err := frame.CreatePresentationFromPD(credentialBz, pdBz)
 	require.NoError(t, err)
